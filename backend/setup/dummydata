@@ -1,0 +1,5 @@
+INSERT INTO users (first_name, last_name, email)
+VALUES ('Alice', 'Smith', 'alice@example.com');
+
+INSERT INTO user_bios (user_id, display_name, bio_description)
+VALUES (1, 'VintageAlice', 'Lover of 80s toys');
