@@ -1,5 +1,16 @@
-INSERT INTO users (first_name, last_name, email)
-VALUES ('Alice', 'Smith', 'alice@example.com');
+INSERT INTO users (first_name, last_name, email, password)
+VALUES ('Alice', 'Smith', 'alice@example.com', 'password');
 
 INSERT INTO user_bios (user_id, display_name, bio_description)
 VALUES (1, 'VintageAlice', 'Lover of 80s toys');
+
+
+INSERT INTO users (first_name, last_name, email, password_hash) 
+VALUES ('Joseph', 'Bartram', 'joseph@example.com', 'testpassword123')
+RETURNING id;
+
+INSERT INTO user_bios (user_id, display_name, store_name, bio_description, profile_image) 
+VALUES ('524d21bf-2f0f-4bfc-8d9c-724ef2f03c3d', 'Test User', 'Test Store', 'Test description', 'https://example.com/profile.jpg');
+
+
+ 

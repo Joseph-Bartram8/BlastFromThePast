@@ -20,8 +20,17 @@ func main() {
 	// Setup router
 	r := router.SetupRouter()
 
+	r.Use(loggingMiddleware)
+
 	// Start the server
 	port := ":8080"
 	fmt.Println("🚀 Server running on http://localhost" + port)
 	log.Fatal(http.ListenAndServe(port, r))
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("📌 Incoming Request:", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
 }

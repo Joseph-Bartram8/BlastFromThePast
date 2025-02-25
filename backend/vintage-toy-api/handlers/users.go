@@ -5,119 +5,170 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/Joseph_Bartram8/vintage-toy-api/db"
-	"github.com/Joseph_Bartram8/vintage-toy-api/models"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 // Get all users
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query("SELECT id, first_name, last_name, email, mobile_number, created_at FROM users")
+	log.Println("🔍 Fetching all users")
+
+	rows, err := db.DB.Query("SELECT id, first_name, last_name FROM users")
 	if err != nil {
-		log.Println("Database query error:", err)
-		http.Error(w, "Database query error", http.StatusInternalServerError)
+		log.Println("Database error:", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	var users []models.User
-	for rows.Next() {
-		var user models.User
-		var mobile sql.NullString // Temporary variable
+	var users []struct {
+		ID        uuid.UUID `json:"id"`
+		FirstName string    `json:"first_name"`
+		LastName  string    `json:"last_name"`
+	}
 
-		err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &mobile, &user.CreatedAt)
-		if err != nil {
-			log.Println("Error scanning user data:", err)
-			http.Error(w, "Error scanning result", http.StatusInternalServerError)
-			return
+	for rows.Next() {
+		var user struct {
+			ID        uuid.UUID `json:"id"`
+			FirstName string    `json:"first_name"`
+			LastName  string    `json:"last_name"`
 		}
 
-		// Convert NULL to an empty string
-		if mobile.Valid {
-			user.MobileNumber = mobile.String
-		} else {
-			user.MobileNumber = ""
+		err := rows.Scan(&user.ID, &user.FirstName, &user.LastName)
+		if err != nil {
+			log.Println("Error scanning user:", err)
+			http.Error(w, "Error retrieving users", http.StatusInternalServerError)
+			return
 		}
 
 		users = append(users, user)
 	}
 
-	log.Println("✅ Successfully retrieved users")
-	w.Header().Set("Content-Type", "application/json")
+	if err = rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(users)
 }
 
 // Get a single user by ID
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	userID, err := strconv.Atoi(params["id"])
+	vars := mux.Vars(r)
+	userID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 		return
 	}
 
-	var user models.User
-	var mobile sql.NullString // Temporary variable
+	log.Println("Fetching user with ID:", userID)
 
-	err = db.DB.QueryRow("SELECT id, first_name, last_name, email, mobile_number, created_at FROM users WHERE id = $1", userID).
-		Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &mobile, &user.CreatedAt)
+	var user struct {
+		ID        uuid.UUID `json:"id"`
+		FirstName string    `json:"first_name"`
+		LastName  string    `json:"last_name"`
+		Email     string    `json:"email"`
+	}
 
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "User not found", http.StatusNotFound)
-		} else {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-		}
+	err = db.DB.QueryRow(
+		"SELECT id, first_name, last_name, email FROM users WHERE id = $1", userID,
+	).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	// Convert NULL to empty string
-	if mobile.Valid {
-		user.MobileNumber = mobile.String
-	} else {
-		user.MobileNumber = ""
-	}
-
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
 
 // Create a new user
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	var user models.User
+	var user struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+	}
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	// Use NULL if mobile_number is empty
-	var mobile sql.NullString
-	if user.MobileNumber != "" {
-		mobile = sql.NullString{String: user.MobileNumber, Valid: true}
-	} else {
-		mobile = sql.NullString{Valid: false}
-	}
+	// Generate a new UUID for the user
+	userID := uuid.New()
 
-	query := "INSERT INTO users (first_name, last_name, email, mobile_number) VALUES ($1, $2, $3, $4) RETURNING id, created_at"
-	err = db.DB.QueryRow(query, user.FirstName, user.LastName, user.Email, mobile).
-		Scan(&user.ID, &user.CreatedAt)
+	_, err = db.DB.Exec(
+		"INSERT INTO users (id, first_name, last_name, email, password_hash) VALUES ($1, $2, $3, $4, $5)",
+		userID, user.FirstName, user.LastName, user.Email, user.Password,
+	)
 
 	if err != nil {
-		http.Error(w, "Database insert error", http.StatusInternalServerError)
+		log.Println("❌ Error inserting user:", err)
+		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		return
 	}
 
-	// Convert NULL to empty string before returning response
-	if mobile.Valid {
-		user.MobileNumber = mobile.String
-	} else {
-		user.MobileNumber = ""
+	log.Println("New user created with ID:", userID)
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": userID.String()})
+}
+
+func GetMyProfile(w http.ResponseWriter, r *http.Request) {
+	log.Println("🔍 GetMyProfile function called!")
+
+	// ✅ Extract UUID from Request Context
+	userIDStr, ok := r.Context().Value("user").(string)
+	if !ok {
+		log.Println("❌ No UUID found in request context")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
+	log.Println("✅ Extracted user ID from request context:", userIDStr)
+
+	// ✅ Convert UUID from String
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Println("❌ UUID Parsing Error:", err)
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("✅ UUID Successfully Parsed:", userID)
+
+	var user struct {
+		ID        uuid.UUID `json:"id"`
+		FirstName string    `json:"first_name"`
+		LastName  string    `json:"last_name"`
+		Email     string    `json:"email"`
+	}
+
+	// ✅ Fetch User from Database
+	err = db.DB.QueryRow(
+		"SELECT id, first_name, last_name, email FROM users WHERE id = $1", userID,
+	).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email)
+
+	if err == sql.ErrNoRows {
+		log.Println("❌ User not found in database")
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Println("❌ Database error:", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("✅ Successfully retrieved user profile:", user)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
 }

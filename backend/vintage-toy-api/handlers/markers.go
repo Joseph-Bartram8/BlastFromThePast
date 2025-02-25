@@ -2,31 +2,59 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/Joseph_Bartram8/vintage-toy-api/db"
-	"github.com/Joseph_Bartram8/vintage-toy-api/models" // Import models package
+	"github.com/google/uuid"
 )
 
-// Get all public markers
+// GetMarkers fetches all markers
 func GetMarkers(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query("SELECT id, user_id, name, description, photo, latitude, longitude, marker_type, privacy, created_at FROM user_markers WHERE privacy = 'public'")
+	log.Println("🔍 Fetching all markers")
+
+	rows, err := db.DB.Query("SELECT id, user_id, name, description, photo, location FROM user_markers")
 	if err != nil {
-		http.Error(w, "Database query error", http.StatusInternalServerError)
+		log.Println("Database error:", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	var markers []models.Marker // Use models.Marker instead of defining the struct again
+	var markers []struct {
+		ID          uuid.UUID `json:"id"`
+		UserID      uuid.UUID `json:"user_id"`
+		Name        string    `json:"name"`
+		Description string    `json:"description"`
+		Photo       string    `json:"photo"`
+		Location    string    `json:"location"`
+	}
+
 	for rows.Next() {
-		var marker models.Marker
-		if err := rows.Scan(&marker.ID, &marker.UserID, &marker.Name, &marker.Description, &marker.Photo, &marker.Latitude, &marker.Longitude, &marker.MarkerType, &marker.Privacy, &marker.CreatedAt); err != nil {
-			http.Error(w, "Error scanning result", http.StatusInternalServerError)
+		var marker struct {
+			ID          uuid.UUID `json:"id"`
+			UserID      uuid.UUID `json:"user_id"`
+			Name        string    `json:"name"`
+			Description string    `json:"description"`
+			Photo       string    `json:"photo"`
+			Location    string    `json:"location"`
+		}
+
+		err := rows.Scan(&marker.ID, &marker.UserID, &marker.Name, &marker.Description, &marker.Photo, &marker.Location)
+		if err != nil {
+			log.Println("Error scanning marker:", err)
+			http.Error(w, "Error retrieving markers", http.StatusInternalServerError)
 			return
 		}
+
 		markers = append(markers, marker)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	if err = rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(markers)
 }
