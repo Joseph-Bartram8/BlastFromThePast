@@ -18,7 +18,7 @@ CREATE TABLE user_bios (
     store_name VARCHAR(100),
     bio_description TEXT,
     profile_image TEXT,
-    show_real_name BOOLEAN NOT NULL DEFAULT FALSE,
+    show_real_name BOOLEAN NOT NULL DEFAULT TRUE,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

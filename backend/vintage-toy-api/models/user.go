@@ -1,6 +1,9 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+)
 
 // User struct
 type User struct {
@@ -20,4 +23,24 @@ type UserBio struct {
 	BioDescription string    `json:"bio_description"`
 	ProfileImage   string    `json:"profile_image"`
 	UpdatedAt      string    `json:"updated_at"`
+}
+
+var Validate = validator.New()
+
+// CreateUserRequest struct
+type CreateUserRequest struct {
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	Password    string `json:"password" validate:"required,min=8"`
+	DisplayName string `json:"display_name" validate:"required"`
+}
+
+// UserResponse struct
+type UserResponse struct {
+	ID           uuid.UUID `json:"id"`
+	DisplayName  string    `json:"display_name"`
+	FirstName    *string   `json:"first_name,omitempty"`
+	LastName     *string   `json:"last_name,omitempty"`
+	ProfileImage string    `json:"profile_image"`
 }

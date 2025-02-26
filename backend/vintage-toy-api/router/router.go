@@ -1,35 +1,34 @@
 package router
 
 import (
-	"fmt"
-	"net/http"
+	"database/sql"
 
 	"github.com/Joseph_Bartram8/vintage-toy-api/handlers"
 	"github.com/Joseph_Bartram8/vintage-toy-api/middleware"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
-// SetupRouter with Explicit Middleware Application
-func SetupRouter() *mux.Router {
-	r := mux.NewRouter().UseEncodedPath()
+// SetupRouter initializes the API routes
+func SetupRouter(db *sql.DB) *chi.Mux {
+	r := chi.NewRouter()
 
-	// Log Middleware Registration
-	fmt.Println("📌 Middleware Registered for All Routes")
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
 
-	// Apply Middleware to ALL Routes
-	r.Use(middleware.AuthMiddleware)
+	// Public Routes
+	r.Post("/login", handlers.LoginHandler(db))
+	r.Post("/users", handlers.CreateUserHandler(db))
+	r.Get("/users", handlers.GetUsersHandler(db))
 
-	// Register Routes
-	r.HandleFunc("/users", handlers.GetUsers).Methods("GET")
-	r.HandleFunc("/users/{id}", handlers.GetUserByID).Methods("GET")
-	r.HandleFunc("/users", handlers.CreateUser).Methods("POST")
-	r.HandleFunc("/login", handlers.Login).Methods("POST")
+	// Protected Routes
+	r.Route("/api", func(api chi.Router) {
+		api.Use(middleware.AuthMiddleware)
 
-	r.HandleFunc("/users/me", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("📌 Route `/users/me` reached in router.go - Sending test response")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Test response from /users/me"))
-	}).Methods("GET")
+		api.Get("/user", handlers.GetCurrentUserHandler(db))
+		api.Patch("/user", handlers.UpdateUserHandler(db))
+		api.Delete("/user", handlers.DeleteUserHandler(db))
+	})
 
 	return r
 }
