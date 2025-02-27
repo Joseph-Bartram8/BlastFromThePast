@@ -13,6 +13,8 @@ import (
 func SetupRouter(db *sql.DB) *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Use(middleware.CORS)
+
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 
@@ -20,6 +22,7 @@ func SetupRouter(db *sql.DB) *chi.Mux {
 	r.Post("/login", handlers.LoginHandler(db))
 	r.Post("/users", handlers.CreateUserHandler(db))
 	r.Get("/users", handlers.GetUsersHandler(db))
+	r.Post("/logout", handlers.LogoutHandler())
 
 	// Protected Routes
 	r.Route("/api", func(api chi.Router) {

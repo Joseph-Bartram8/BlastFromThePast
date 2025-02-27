@@ -38,15 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     await logoutUser();
     setIsAuthenticated(false);
+    window.location.reload();
   }
 
   useEffect(() => {
     async function checkAuthStatus() {
-      const response = await fetch("http://localhost:8080/api/user", {
-        credentials: "include",
-      });
+      try {
+        const response = await fetch("http://localhost:8080/api/user", {
+          credentials: "include",
+        });
 
-      setIsAuthenticated(response.ok);
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else if (response.status === 401) {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Error fetching auth status:", error);
+        setIsAuthenticated(false);
+      }
     }
 
     checkAuthStatus();
@@ -59,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ Proper Hook to Use Auth Context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

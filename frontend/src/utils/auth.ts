@@ -43,4 +43,8 @@ export async function logoutUser(): Promise<void> {
     method: "POST",
     credentials: "include",
   });
+
+  localStorage.removeItem("auth_user"); // Optional: Remove any stored user data
+  document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  window.location.reload();
 }

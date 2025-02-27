@@ -10,7 +10,8 @@ import (
 
 	"github.com/Joseph_Bartram8/vintage-toy-api/middleware"
 	"github.com/Joseph_Bartram8/vintage-toy-api/models"
-	"github.com/go-chi/chi/v5"
+
+	//"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +22,9 @@ func GetUsersHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Query users with privacy setting applied
 		rows, err := db.Query(`
-			SELECT u.id, ub.display_name, ub.profile_image, ub.show_real_name, 
+			SELECT 
+				u.is_deleted, ub.display_name, ub.store_name, ub.bio_description, 
+				ub.profile_image, ub.show_real_name, ub.updated_at,
 				CASE WHEN ub.show_real_name THEN u.first_name ELSE NULL END AS first_name,
 				CASE WHEN ub.show_real_name THEN u.last_name ELSE NULL END AS last_name
 			FROM users u
@@ -35,29 +38,51 @@ func GetUsersHandler(db *sql.DB) http.HandlerFunc {
 		defer rows.Close()
 
 		// Parse results into a slice
-		var users []models.UserResponse
+		var users []models.User
 		for rows.Next() {
-			var user models.UserResponse
-			var firstName, lastName sql.NullString // Nullable values
+			var user models.User
+			var bio models.UserBioResponse
+			var firstName, lastName, storeName, bioDescription, profileImage, updatedAt sql.NullString
 
-			err := rows.Scan(&user.ID, &user.DisplayName, &user.ProfileImage, new(bool), &firstName, &lastName)
+			err := rows.Scan(
+				&user.IsDeleted,
+				&bio.DisplayName, &storeName, &bioDescription,
+				&bio.ProfileImage, &bio.ShowRealName, &updatedAt,
+				&firstName, &lastName,
+			)
 			if err != nil {
 				http.Error(w, "Error scanning users", http.StatusInternalServerError)
 				return
 			}
 
-			// Handle null values (hide real names if show_real_name = false)
+			// Assign nullable fields safely
 			if firstName.Valid {
-				user.FirstName = &firstName.String
+				user.FirstName = firstName.String
 			}
 			if lastName.Valid {
-				user.LastName = &lastName.String
+				user.LastName = lastName.String
 			}
+			if storeName.Valid {
+				bio.StoreName = &storeName.String
+			}
+			if bioDescription.Valid {
+				bio.BioDescription = &bioDescription.String
+			}
+			if profileImage.Valid {
+				bio.ProfileImage = &profileImage.String
+			}
+			if updatedAt.Valid {
+				bio.UpdatedAt = updatedAt.String
+			}
+
+			// Attach UserBioResponse to UserResponse
+			user.UserBio = &bio
 
 			users = append(users, user)
 		}
 
 		// Return JSON response
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(users)
 	}
 }
@@ -138,7 +163,7 @@ func CreateUserHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func GetUserByID(db *sql.DB) http.HandlerFunc {
+/*func GetUserByID(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract user ID from URL
 		userIDStr := chi.URLParam(r, "id")
@@ -159,7 +184,7 @@ func GetUserByID(db *sql.DB) http.HandlerFunc {
 
 		json.NewEncoder(w).Encode(user)
 	}
-}
+}*/
 
 // GetCurrentUserHandler fetches the authenticated user's info
 func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
@@ -197,9 +222,10 @@ func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var user models.User
-		err = db.QueryRow("SELECT first_name, last_name, email, created_at FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
-			Scan(&user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
+		var user models.UserResponse
+
+		err = db.QueryRow("SELECT first_name, last_name, email FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
+			Scan(&user.FirstName, &user.LastName, &user.Email)
 
 		if err == sql.ErrNoRows {
 			log.Println("User not found in database")

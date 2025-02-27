@@ -2,27 +2,14 @@ package models
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 )
 
-// User struct
+// Public User struct
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	CreatedAt    string    `json:"created_at"`
-}
-
-// UserBio struct
-type UserBio struct {
-	UserID         uuid.UUID `json:"user_id"`
-	DisplayName    string    `json:"display_name"`
-	StoreName      *string   `json:"store_name"`
-	BioDescription string    `json:"bio_description"`
-	ProfileImage   string    `json:"profile_image"`
-	UpdatedAt      string    `json:"updated_at"`
+	FirstName string           `json:"first_name"`
+	LastName  string           `json:"last_name"`
+	IsDeleted bool             `json:"is_deleted"`
+	UserBio   *UserBioResponse `json:"user_bio,omitempty"`
 }
 
 var Validate = validator.New()
@@ -38,9 +25,19 @@ type CreateUserRequest struct {
 
 // UserResponse struct
 type UserResponse struct {
-	ID           uuid.UUID `json:"id"`
-	DisplayName  string    `json:"display_name"`
-	FirstName    *string   `json:"first_name,omitempty"`
-	LastName     *string   `json:"last_name,omitempty"`
-	ProfileImage string    `json:"profile_image"`
+	FirstName *string          `json:"first_name" validate:"required"`
+	LastName  *string          `json:"last_name" validate:"required"`
+	Email     *string          `json:"email" validate:"required,email"`
+	IsDeleted *bool            `json:"is_deleted"`
+	UserBio   *UserBioResponse `json:"user_bio,omitempty"`
+}
+
+// UserBioResponse struct
+type UserBioResponse struct {
+	DisplayName    string  `json:"display_name" validate:"required"`
+	StoreName      *string `json:"store_name,omitempty"`
+	BioDescription *string `json:"bio_description,omitempty"`
+	ProfileImage   *string `json:"profile_image,omitempty"`
+	ShowRealName   bool    `json:"show_real_name"`
+	UpdatedAt      string  `json:"updated_at"`
 }
