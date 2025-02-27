@@ -1,30 +1,54 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useState, useEffect, ReactNode } from "react";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  async function login(email: string, password: string) {
+    const response = await fetch("http://localhost:8080/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Invalid email or password");
+    }
+
+    setIsAuthenticated(true);
+  }
+
+  async function logout() {
+    await fetch("http://localhost:8080/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+    setIsAuthenticated(false);
+  }
+
+  useEffect(() => {
+    async function checkAuthStatus() {
+      const response = await fetch("http://localhost:8080/api/user", {
+        credentials: "include",
+      });
+  
+      setIsAuthenticated(response.ok);
+    }
+  
+    checkAuthStatus();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 }

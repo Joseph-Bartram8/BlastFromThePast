@@ -7,9 +7,12 @@ import (
 
 	"github.com/Joseph_Bartram8/vintage-toy-api/models"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var user models.User
 
 // Get all users
 func GetUsersHandler(db *sql.DB) http.HandlerFunc {
@@ -159,33 +162,45 @@ func GetUserByID(db *sql.DB) http.HandlerFunc {
 // GetCurrentUserHandler fetches the authenticated user's info
 func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract user ID from JWT context
-		userID, ok := r.Context().Value("userID").(uuid.UUID)
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		// Retrieve the JWT token from cookies
+		cookie, err := r.Cookie("auth_token")
+		if err != nil {
+			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
 
-		// Fetch user data
-		var user struct {
-			ID        uuid.UUID `json:"id"`
-			FirstName string    `json:"first_name"`
-			LastName  string    `json:"last_name"`
-			Email     string    `json:"email"`
-			CreatedAt string    `json:"created_at"`
+		// Parse and validate the token
+		tokenStr := cookie.Value
+		claims := &jwt.RegisteredClaims{}
+
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
 		}
 
-		err := db.QueryRow(
-			"SELECT id, first_name, last_name, email, created_at FROM users WHERE id = $1 AND is_deleted = FALSE",
-			userID,
-		).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
+		// Extract user ID from token
+		userID, err := uuid.Parse(claims.Subject)
+		if err != nil {
+			http.Error(w, "Invalid token subject", http.StatusUnauthorized)
+			return
+		}
+
+		err = db.QueryRow("SELECT id, first_name, last_name, email, created_at FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
+			Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
 
 		if err == sql.ErrNoRows {
-			http.Error(w, "User not found or deleted", http.StatusNotFound)
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 
-		// Return the authenticated user's info
+		// Return user info
 		json.NewEncoder(w).Encode(user)
 	}
 }
