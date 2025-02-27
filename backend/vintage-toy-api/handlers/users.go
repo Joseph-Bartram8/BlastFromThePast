@@ -3,16 +3,18 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 
+	"fmt"
+
+	"github.com/Joseph_Bartram8/vintage-toy-api/middleware"
 	"github.com/Joseph_Bartram8/vintage-toy-api/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var user models.User
 
 // Get all users
 func GetUsersHandler(db *sql.DB) http.HandlerFunc {
@@ -162,22 +164,27 @@ func GetUserByID(db *sql.DB) http.HandlerFunc {
 // GetCurrentUserHandler fetches the authenticated user's info
 func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Recieved Cookies:", r.Cookies())
+
 		// Retrieve the JWT token from cookies
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
+			log.Println("No auth_token cookie found")
 			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
 
-		// Parse and validate the token
 		tokenStr := cookie.Value
-		claims := &jwt.RegisteredClaims{}
+		fmt.Println("Cookie Value:", cookie.Value)
 
+		// Parse and validate the token
+		claims := &jwt.RegisteredClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return jwtKey, nil
 		})
 
 		if err != nil || !token.Valid {
+			log.Println("Invalid or expired token")
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
@@ -185,30 +192,33 @@ func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 		// Extract user ID from token
 		userID, err := uuid.Parse(claims.Subject)
 		if err != nil {
+			log.Println("Invalid token subject")
 			http.Error(w, "Invalid token subject", http.StatusUnauthorized)
 			return
 		}
 
-		err = db.QueryRow("SELECT id, first_name, last_name, email, created_at FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
-			Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
+		var user models.User
+		err = db.QueryRow("SELECT first_name, last_name, email, created_at FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
+			Scan(&user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
 
 		if err == sql.ErrNoRows {
+			log.Println("User not found in database")
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		} else if err != nil {
+			log.Println("Database error:", err)
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
-
-		// Return user info
 		json.NewEncoder(w).Encode(user)
 	}
 }
 
+// UpdateUserHandler updates the authenticated user's profile
 func UpdateUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract user ID from JWT context
-		userID, ok := r.Context().Value("userID").(uuid.UUID)
+		// Extract user ID from context (already correct)
+		userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 		if !ok {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -221,7 +231,7 @@ func UpdateUserHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Start a transaction
+		// Start a database transaction
 		tx, err := db.Begin()
 		if err != nil {
 			http.Error(w, "Database transaction error", http.StatusInternalServerError)
@@ -275,10 +285,11 @@ func UpdateUserHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// DeleteUserHandler soft-deletes the authenticated user's account
 func DeleteUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract user ID from JWT context
-		userID, ok := r.Context().Value("userID").(uuid.UUID)
+		// Extract user ID from context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 		if !ok {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return

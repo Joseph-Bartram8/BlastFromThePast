@@ -10,7 +10,7 @@ VALUES ('Joseph', 'Bartram', 'joseph@example.com', 'testpassword123')
 RETURNING id;
 
 INSERT INTO user_bios (user_id, display_name, store_name, bio_description, profile_image) 
-VALUES ('b953ea1b-635f-48d1-afba-d103a7421408', 'Test User', 'Test Store', 'Test description', 'https://example.com/profile.jpg');
+VALUES ('c06d5f22-b582-4bb9-a5bf-0fd8dc19130c', 'Test User', 'Test Store', 'Test description', 'https://example.com/profile.jpg');
 
 
  

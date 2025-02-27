@@ -1,4 +1,7 @@
--- Enable UUID Extension (only needs to be run once)
+-- postgis used for geometry data types
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Users Table
@@ -8,7 +11,8 @@ CREATE TABLE users (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- User Bios Table
