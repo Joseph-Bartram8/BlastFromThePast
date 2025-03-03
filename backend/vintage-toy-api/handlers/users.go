@@ -189,7 +189,7 @@ func CreateUserHandler(db *sql.DB) http.HandlerFunc {
 // GetCurrentUserHandler fetches the authenticated user's info
 func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Recieved Cookies:", r.Cookies())
+		fmt.Println("Received Cookies:", r.Cookies())
 
 		// Retrieve the JWT token from cookies
 		cookie, err := r.Cookie("auth_token")
@@ -200,7 +200,7 @@ func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		tokenStr := cookie.Value
-		fmt.Println("Cookie Value:", cookie.Value)
+		fmt.Println("Cookie Value:", tokenStr)
 
 		// Parse and validate the token
 		claims := &jwt.RegisteredClaims{}
@@ -222,10 +222,24 @@ func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Query user details along with user bio in one query
 		var user models.UserResponse
+		var bio models.UserBioResponse
+		var storeName, bioDescription, profileImage, updatedAt sql.NullString
+		var isDeleted bool
 
-		err = db.QueryRow("SELECT first_name, last_name, email FROM users WHERE id = $1 AND is_deleted = FALSE", userID).
-			Scan(&user.FirstName, &user.LastName, &user.Email)
+		err = db.QueryRow(`
+			SELECT u.first_name, u.last_name, u.email, u.is_deleted, 
+				   ub.display_name, ub.store_name, ub.bio_description, 
+				   ub.profile_image, ub.show_real_name, ub.updated_at
+			FROM users u
+			LEFT JOIN user_bios ub ON u.id = ub.user_id
+			WHERE u.id = $1 AND u.is_deleted = FALSE;
+		`, userID).Scan(
+			&user.FirstName, &user.LastName, &user.Email, &isDeleted, 
+			&bio.DisplayName, &storeName, &bioDescription,
+			&profileImage, &bio.ShowRealName, &updatedAt,
+		)
 
 		if err == sql.ErrNoRows {
 			log.Println("User not found in database")
@@ -236,6 +250,27 @@ func GetCurrentUserHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
+
+		// Assign nullable fields safely
+		if storeName.Valid {
+			bio.StoreName = &storeName.String
+		}
+		if bioDescription.Valid {
+			bio.BioDescription = &bioDescription.String
+		}
+		if profileImage.Valid {
+			bio.ProfileImage = &profileImage.String
+		}
+		if updatedAt.Valid {
+			bio.UpdatedAt = updatedAt.String
+		}
+
+		// Attach UserBioResponse to UserResponse
+		user.IsDeleted = &isDeleted
+		user.UserBio = &bio
+
+		// Return JSON response
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(user)
 	}
 }

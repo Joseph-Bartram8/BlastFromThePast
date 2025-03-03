@@ -1,36 +1,36 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { FaUserCircle } from "react-icons/fa";
-
-// Import routes
-import { Route as HomeRoute } from "../routes/index";
-import { Route as AboutRoute } from "../routes/about";
-import { Route as DashboardRoute } from "../routes/dashboard";
-import { Route as SignupRoute } from "../routes/signup";
+import { motion, useScroll, useMotionValueEvent } from "framer-motion";
+import { FaBars } from "react-icons/fa";
 import { logoutUser } from "../utils/auth";
 
 export default function Navbar() {
-  const { isAuthenticated, login } = useAuth();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSticky, setIsSticky] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const routerState = useRouterState();
+  const { isAuthenticated } = useAuth();
+  const [userData, setUserData] = useState(() => {
+    const storedUser = sessionStorage.getItem("userData");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsSticky(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const { scrollY } = useScroll();
+
+  // Detect scrolling and update navbar state
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 50); // Background & border appear after 50px scroll
+  });
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
@@ -39,93 +39,97 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
+  async function handleLogout() {
+    await logoutUser();
+    sessionStorage.removeItem("userData");
+    setUserData(null);
     setDropdownOpen(false);
-  }, [routerState.location.href]);
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    try {
-      await login(email, password);
-      setDropdownOpen(false);
-    } catch (err) {
-      setError("Invalid email or password.");
-    }
+    window.location.reload();
   }
 
   return (
     <motion.nav
-      initial={{ opacity: 1 }}
-      animate={isSticky ? { backgroundColor: "#212121", borderBottom: "2px solid rgba(255, 255, 255, 0.2)" } : {}}
-      transition={{ duration: 0.3 }}
-      className={`fixed top-0 w-full text-white py-4 shadow-lg transition-all ${isSticky ? "shadow-md backdrop-blur-md" : "bg-transparent"}`}
+      className="fixed top-0 w-full z-50 py-4 transition-all"
+      initial={{ backgroundColor: "transparent", borderBottom: "0px solid transparent" }}
+      animate={{
+        backgroundColor: isScrolled ? "#595B61" : "transparent",
+        borderBottom: isScrolled ? "2px solid rgba(255, 255, 255, 0.2)" : "0px solid transparent",
+      }}
+      transition={{ duration: 0.3, ease: "easeOut" }} // Smooth transition effect
     >
-      <div className="container mx-auto flex justify-between items-center px-6">
-        {/* Centered Links */}
-        <div className="flex-1 flex justify-center space-x-6">
-          <Link to={HomeRoute.fullPath} className="hover:text-gray-300 transition">Home</Link>
-          <Link to={AboutRoute.fullPath} className="hover:text-gray-300 transition">About</Link>
-          {isAuthenticated && <Link to={DashboardRoute.fullPath} className="hover:text-gray-300 transition">Dashboard</Link>}
+      <div className="container mx-auto flex items-center justify-between px-6">
+        {/* Burger Menu */}
+        <div ref={menuRef} className="relative">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="text-white text-2xl focus:outline-none"
+          >
+            <FaBars />
+          </button>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="absolute left-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 border border-gray-300"
+            >
+              <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
+                Home
+              </Link>
+              <Link to="/about" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
+                About
+              </Link>
+              {isAuthenticated && (
+                <Link to="/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
+                  Dashboard
+                </Link>
+              )}
+            </motion.div>
+          )}
         </div>
 
-        {/* Profile / Login Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        {/* Centered Page Title */}
+        <Link to="/" className="text-xl font-bold text-white absolute left-1/2 transform -translate-x-1/2">
+          The Toy Portal
+        </Link>
+
+        {/* Login/Join the Community Button */}
+        <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center space-x-2 focus:outline-none hover:cursor-pointer"
+            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
           >
-            <FaUserCircle className="text-2xl" />
-            {isAuthenticated && <span>John Doe</span>}
+            {isAuthenticated ? userData?.user_bio?.display_name || "User" : "Join The Community"}
           </button>
 
           {dropdownOpen && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute right-0 mt-2 w-64 bg-[#212121] shadow-lg rounded-md p-4 border border-gray-600"
+              className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-md py-4 border border-gray-300"
             >
               {isAuthenticated ? (
                 <button
-                onClick={async () => {
-                  await logoutUser();
-                  setDropdownOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:cursor-pointer rounded"
-              >
-                Logout
-              </button>
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-200 rounded"
+                >
+                  Logout
+                </button>
               ) : (
-                <form onSubmit={handleLogin} className="flex flex-col space-y-3">
-                  {error && <p className="text-red-500 text-sm">{error}</p>}
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="p-2 rounded bg-neutral-900 text-white border border-gray-600"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="p-2 rounded bg-neutral-900 text-white border border-gray-600"
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 cursor-pointer"
+                <div className="flex flex-col items-center px-4">
+                  <p className="text-sm text-gray-600 mb-2">Login or sign up to join our community!</p>
+                  <Link
+                    to="/login"
+                    className="bg-blue-500 px-4 py-2 text-white rounded-md hover:bg-blue-600 transition"
                   >
                     Login
-                  </button>
+                  </Link>
                   <Link
-                    to={SignupRoute.fullPath}
-                    className="text-sm text-gray-400 hover:text-gray-200 text-center"
+                    to="/signup"
+                    className="text-blue-500 mt-2 hover:underline"
                   >
                     Don't have an account? Sign up here!
                   </Link>
-                </form>
+                </div>
               )}
             </motion.div>
           )}

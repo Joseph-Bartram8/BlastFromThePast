@@ -1,8 +1,26 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { loginUser, signupUser, logoutUser } from "../utils/auth";
 
+interface UserBio {
+  display_name: string;
+  store_name?: string;
+  bio_description?: string;
+  profile_image?: string;
+  show_real_name: boolean;
+  updated_at: string;
+}
+
+interface UserData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_deleted?: boolean;
+  user_bio?: UserBio;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
+  userData: UserData | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (
     firstName: string,
@@ -18,12 +36,54 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
-  async function login(email: string, password: string) {
-    await loginUser(email, password);
-    setIsAuthenticated(true);
+  // 🔹 Fetch user data from API
+  async function fetchUserData() {
+    try {
+      const response = await fetch("http://localhost:8080/api/user", {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data: UserData = await response.json();
+        setUserData(data);
+        sessionStorage.setItem("userData", JSON.stringify(data)); // Persist user session
+        setIsAuthenticated(true);
+      } else {
+        setUserData(null);
+        sessionStorage.removeItem("userData");
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUserData(null);
+      setIsAuthenticated(false);
+    }
   }
 
+  // 🔹 Check auth status on load
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem("userData");
+    if (storedUser) {
+      setUserData(JSON.parse(storedUser));
+      setIsAuthenticated(true);
+    } else {
+      fetchUserData();
+    }
+  }, []);
+
+  // 🔹 Handle login
+  async function login(email: string, password: string) {
+    try {
+      await loginUser(email, password);
+      await fetchUserData(); // Fetch user data after login
+    } catch (error) {
+      console.error("Login error:", error);
+    }
+  }
+
+  // 🔹 Handle signup
   async function signup(
     firstName: string,
     lastName: string,
@@ -31,39 +91,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     displayName: string
   ) {
-    await signupUser(firstName, lastName, email, password, displayName);
-    setIsAuthenticated(true);
-  }
-
-  async function logout() {
-    await logoutUser();
-    setIsAuthenticated(false);
-    window.location.reload();
-  }
-
-  useEffect(() => {
-    async function checkAuthStatus() {
-      try {
-        const response = await fetch("http://localhost:8080/api/user", {
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          setIsAuthenticated(true);
-        } else if (response.status === 401) {
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error("Error fetching auth status:", error);
-        setIsAuthenticated(false);
-      }
+    try {
+      await signupUser(firstName, lastName, email, password, displayName);
+      await fetchUserData(); // Fetch user data after signup
+    } catch (error) {
+      console.error("Signup error:", error);
     }
+  }
 
-    checkAuthStatus();
-  }, []);
+  // 🔹 Handle logout
+  async function logout() {
+    try {
+      await logoutUser();
+      setIsAuthenticated(false);
+      setUserData(null);
+      sessionStorage.removeItem("userData");
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userData, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
