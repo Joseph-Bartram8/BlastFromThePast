@@ -87,7 +87,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Next Toy Fair Section (Aligned title & Image on Right) */}
+        {/* Advertisement or Content Placeholder */}
+        <div className="container mx-auto py-6 px-6">
+          <div className="w-full h-32 bg-gray-300 flex items-center justify-center text-gray-600">
+            Advertisement or Content Space
+          </div>
+        </div>
+
+        {/* Next Toy Fair Section */}
         <div className="w-full bg-white py-10 relative flex h-100">
           <div className="container mx-auto flex flex-row-reverse items-center">
             <img

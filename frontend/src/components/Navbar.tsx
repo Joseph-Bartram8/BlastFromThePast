@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
@@ -7,6 +7,9 @@ import { logoutUser } from "../utils/auth";
 
 export default function Navbar() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation(); // Detects the current route
+  const isHomePage = location.pathname === "/"; // Check if on home page
+
   const [userData, setUserData] = useState(() => {
     const storedUser = sessionStorage.getItem("userData");
     return storedUser ? JSON.parse(storedUser) : null;
@@ -21,9 +24,8 @@ export default function Navbar() {
 
   const { scrollY } = useScroll();
 
-  // Detect scrolling and update navbar state
   useMotionValueEvent(scrollY, "change", (latest) => {
-    setIsScrolled(latest > 50); // Background & border appear after 50px scroll
+    setIsScrolled(latest > 50); // Background & border appear after scrolling 50px
   });
 
   useEffect(() => {
@@ -50,14 +52,17 @@ export default function Navbar() {
   return (
     <motion.nav
       className="fixed top-0 w-full z-50 py-4 transition-all"
-      initial={{ backgroundColor: "transparent", borderBottom: "0px solid transparent" }}
+      initial={{
+        backgroundColor: isHomePage ? "transparent" : "#595B61",
+        borderBottom: isHomePage ? "0px solid transparent" : "2px solid rgba(255, 255, 255, 0.2)",
+      }}
       animate={{
-        backgroundColor: isScrolled ? "#595B61" : "transparent",
-        borderBottom: isScrolled ? "2px solid rgba(255, 255, 255, 0.2)" : "0px solid transparent",
+        backgroundColor: isHomePage && !isScrolled ? "transparent" : "#595B61",
+        borderBottom: isHomePage && !isScrolled ? "0px solid transparent" : "2px solid rgba(255, 255, 255, 0.2)",
       }}
       transition={{ duration: 0.3, ease: "easeOut" }} // Smooth transition effect
     >
-      <div className="container mx-auto flex items-center justify-between px-6">
+      <div className="container mx-auto flex items-center justify-between px-6 z-50">
         {/* Burger Menu */}
         <div ref={menuRef} className="relative">
           <button
@@ -78,6 +83,9 @@ export default function Navbar() {
               <Link to="/about" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
                 About
               </Link>
+              <Link to="/mapPage" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
+                Map
+              </Link>
               {isAuthenticated && (
                 <Link to="/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-200">
                   Dashboard
@@ -88,12 +96,12 @@ export default function Navbar() {
         </div>
 
         {/* Centered Page Title */}
-        <Link to="/" className="text-xl font-bold text-white absolute left-1/2 transform -translate-x-1/2">
+        <Link to="/" className="text-xl font-bold font-[Krona_One] text-white absolute left-1/2 transform -translate-x-1/2">
           The Toy Portal
         </Link>
 
-        {/* Login/Join the Community Button */}
-        <div ref={dropdownRef} className="relative">
+        {/* User Auth Section */}
+        <div ref={dropdownRef} className="relative z-50">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"

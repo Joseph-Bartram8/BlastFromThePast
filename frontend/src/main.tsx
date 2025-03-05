@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'

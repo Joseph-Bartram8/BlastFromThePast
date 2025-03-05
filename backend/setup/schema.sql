@@ -29,12 +29,18 @@ CREATE TABLE user_bios (
 -- User Markers Table
 CREATE TABLE user_markers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    name TEXT NOT NULL,
     description TEXT,
-    photo TEXT,
-    location GEOMETRY(Point, 4326),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    region TEXT NOT NULL CHECK (region IN (
+        'North East', 'North West', 'Yorkshire and the Humber', 'West Midlands', 
+        'East Midlands', 'South West', 'South East', 'London', 'East of England'
+    )),
+    marker_type TEXT NOT NULL CHECK (marker_type IN ('Shop', 'Collector', 'Event', 'Trade Meetup')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Trigger to Auto-Update updated_at in user_bios
