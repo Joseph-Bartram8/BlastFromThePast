@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	_ "github.com/lib/pq"
 
@@ -17,7 +18,16 @@ func main() {
 	// Initialize router with database instance
 	r := router.SetupRouter(db.DB)
 
+	// Get port from environment variable (Render provides this dynamically)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default to 8080 if not set (for local testing)
+	}
+
 	// Start server
-	log.Println("Server running on :8080")
-	http.ListenAndServe(":8080", r)
+	log.Printf("🚀 Server running on :%s\n", port)
+	err := http.ListenAndServe(":"+port, r)
+	if err != nil {
+		log.Fatal("❌ Server failed to start:", err)
+	}
 }
