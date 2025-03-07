@@ -5,7 +5,7 @@ export async function signupUser(
   password: string,
   displayName: string
 ): Promise<void> {
-  const response = await fetch("http://localhost:8080/users", {
+  const response = await fetch("https://blastfromthepastbackend.onrender.com/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -25,7 +25,7 @@ export async function signupUser(
 }
 
 export async function loginUser(email: string, password: string): Promise<void> {
-  const response = await fetch("http://localhost:8080/login", {
+  const response = await fetch("https://blastfromthepastbackend.onrender.com/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -39,7 +39,7 @@ export async function loginUser(email: string, password: string): Promise<void> 
 }
 
 export async function logoutUser(): Promise<void> {
-  await fetch("http://localhost:8080/logout", {
+  await fetch("https://blastfromthepastbackend.onrender.com/logout", {
     method: "POST",
     credentials: "include",
   });

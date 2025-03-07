@@ -19,7 +19,7 @@ interface Marker {
   };
 }
 
-const API_URL = "http://localhost:8080/markers";
+const API_URL = "https://blastfromthepastbackend.onrender.com/markers";
 
 export function useMarkers() {
   const [markers, setMarkers] = useState<Marker[]>([]);

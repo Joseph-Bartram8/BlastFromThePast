@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 🔹 Fetch user data from API
   async function fetchUserData() {
     try {
-      const response = await fetch("http://localhost:8080/api/user", {
+      const response = await fetch("https://blastfromthepastbackend.onrender.com/api/user", {
         credentials: "include",
       });
 
