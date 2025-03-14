@@ -3,7 +3,6 @@ import "leaflet/dist/leaflet.css";
 import { useMarkers } from "../hooks/useMarkers";
 import L from "leaflet";
 import { useState } from "react";
-import { ShoppingCart, User, Calendar, MapPin } from "lucide-react";
 
 // Function to create Lucide-based marker icons
 const createMarkerIcon = (type: string) => {
