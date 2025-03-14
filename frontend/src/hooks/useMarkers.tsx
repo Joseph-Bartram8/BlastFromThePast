@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config"; 
 
 // Define the structure of a marker based on API response
 interface Marker {
@@ -19,7 +20,7 @@ interface Marker {
   };
 }
 
-const API_URL = "http://localhost:8080/markers";
+const API_URL = `${API_BASE_URL}/markers`;
 
 export function useMarkers() {
   const [markers, setMarkers] = useState<Marker[]>([]);

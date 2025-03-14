@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { loginUser, signupUser, logoutUser } from "../utils/auth";
+import { API_BASE_URL } from "../config"; 
 
 interface UserBio {
   display_name: string;
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 🔹 Fetch user data from API
   async function fetchUserData() {
     try {
-      const response = await fetch("http://localhost:8080/api/user", {
+      const response = await fetch(`${API_BASE_URL}/api/user`, {
         credentials: "include",
       });
 
