@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LogIn, Facebook, Apple, CircleUserRound } from "lucide-react";
+import FloatingShapes from "../components/FloatingShapes"
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -93,21 +94,15 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Right Side - Welcome Section */}
-        <div className="w-1/2 bg-blue-100 flex items-center justify-center p-8">
-          <div className="text-center">
+        <div className="w-1/2 bg-blue-100 flex items-center justify-center p-8 relative">
+          <div className="absolute inset-0">
+            <FloatingShapes />
+          </div>
+          <div className="text-center z-10 relative">
             <h2 className="text-xl font-bold text-gray-900">Welcome to ToyBox</h2>
             <p className="text-gray-600 text-sm">Where imagination meets play</p>
-            <div className="flex justify-center mt-4 space-x-4">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full"></div>
-              <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-lg">👀</span>
-              </div>
-              <div className="w-12 h-12 bg-pink-300 rounded-md"></div>
-            </div>
           </div>
         </div>
-
       </div>
     </div>
   );
