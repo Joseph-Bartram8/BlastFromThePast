@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as SignupImport } from './routes/signup'
+import { Route as SearchResultsImport } from './routes/searchResults'
 import { Route as MapPageImport } from './routes/mapPage'
 import { Route as LoginImport } from './routes/login'
 import { Route as DashboardImport } from './routes/dashboard'
@@ -23,6 +24,12 @@ import { Route as IndexImport } from './routes/index'
 const SignupRoute = SignupImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SearchResultsRoute = SearchResultsImport.update({
+  id: '/searchResults',
+  path: '/searchResults',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -95,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapPageImport
       parentRoute: typeof rootRoute
     }
+    '/searchResults': {
+      id: '/searchResults'
+      path: '/searchResults'
+      fullPath: '/searchResults'
+      preLoaderRoute: typeof SearchResultsImport
+      parentRoute: typeof rootRoute
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -113,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/mapPage': typeof MapPageRoute
+  '/searchResults': typeof SearchResultsRoute
   '/signup': typeof SignupRoute
 }
 
@@ -122,6 +137,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/mapPage': typeof MapPageRoute
+  '/searchResults': typeof SearchResultsRoute
   '/signup': typeof SignupRoute
 }
 
@@ -132,14 +148,29 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/mapPage': typeof MapPageRoute
+  '/searchResults': typeof SearchResultsRoute
   '/signup': typeof SignupRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/dashboard' | '/login' | '/mapPage' | '/signup'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/login'
+    | '/mapPage'
+    | '/searchResults'
+    | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/dashboard' | '/login' | '/mapPage' | '/signup'
+  to:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/login'
+    | '/mapPage'
+    | '/searchResults'
+    | '/signup'
   id:
     | '__root__'
     | '/'
@@ -147,6 +178,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/mapPage'
+    | '/searchResults'
     | '/signup'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +189,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   MapPageRoute: typeof MapPageRoute
+  SearchResultsRoute: typeof SearchResultsRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -166,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   MapPageRoute: MapPageRoute,
+  SearchResultsRoute: SearchResultsRoute,
   SignupRoute: SignupRoute,
 }
 
@@ -184,6 +218,7 @@ export const routeTree = rootRoute
         "/dashboard",
         "/login",
         "/mapPage",
+        "/searchResults",
         "/signup"
       ]
     },
@@ -201,6 +236,9 @@ export const routeTree = rootRoute
     },
     "/mapPage": {
       "filePath": "mapPage.tsx"
+    },
+    "/searchResults": {
+      "filePath": "searchResults.tsx"
     },
     "/signup": {
       "filePath": "signup.tsx"
