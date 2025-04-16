@@ -1,14 +1,16 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { FaBars } from "react-icons/fa";
 import { LucideSearch } from "lucide-react";
 import { logoutUser } from "../utils/auth";
+import { useSearchResults } from "../hooks/useSearchResults"; // ✅ make sure this path matches
 
 export default function Navbar() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isHomePage = location.pathname === "/";
 
   const [userData, setUserData] = useState(() => {
@@ -21,13 +23,13 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const { scrollY } = useScroll();
-
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > 50);
   });
@@ -39,6 +41,7 @@ export default function Navbar() {
         !searchInputRef.current.contains(event.target as Node)
       ) {
         setSearchActive(false);
+        setShowDropdown(false);
       }
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
@@ -62,6 +65,16 @@ export default function Navbar() {
     setDropdownOpen(false);
     window.location.reload();
   }
+
+  const results = useSearchResults(searchQuery.trim());
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      navigate({ to: "/searchResults", search: { q: searchQuery } });
+      setShowDropdown(false);
+      setSearchActive(false);
+    }
+  };
 
   return (
     <motion.nav
@@ -107,12 +120,11 @@ export default function Navbar() {
         </Link>
 
         {/* Right Side Controls */}
-        <div className="flex items-center gap-4">
-          {/* Search Toggle or Input */}
+        <div className="flex items-center gap-4 relative">
           {(isScrolled || !isHomePage) && (
             <motion.div
               animate={{ width: searchActive ? "200px" : "40px" }}
-              className="relative overflow-hidden transition-all duration-300"
+              className="relative overflow-visible transition-all duration-300"
             >
               {!searchActive ? (
                 <button
@@ -122,14 +134,41 @@ export default function Navbar() {
                   <LucideSearch />
                 </button>
               ) : (
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
+                <>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onKeyDown={handleSearchKeyDown}
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  {showDropdown && (
+                    <div className="absolute top-full mt-1 bg-white shadow-lg border border-gray-200 w-full rounded-md z-50 max-h-48 overflow-auto">
+                      {results?.results && results.results.length > 0 ? (
+                        results.results.slice(0, 3).map((user) => (
+                          <div
+                            key={user.display_name}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-800"
+                            onClick={() => {
+                              navigate({ to: "/searchResults", search: { q: user.display_name } });
+                              setSearchActive(false);
+                              setShowDropdown(false);
+                            }}
+                          >
+                            {user.display_name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500 italic">No results found</div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
