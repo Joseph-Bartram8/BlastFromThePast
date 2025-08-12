@@ -2,16 +2,35 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useMarkers } from "../hooks/useMarkers";
 import { useState, useEffect } from "react";
 import L from "leaflet";
-import "leaflet.awesome-markers";
-import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-import "leaflet/dist/leaflet.css";
+import { useState } from "react";
 
-// Fix for Leaflet.AwesomeMarkers not being recognized
-declare global {
-  interface Window {
-    L: typeof L;
+// Function to create Lucide-based marker icons
+const createMarkerIcon = (type: string) => {
+  let iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">`;
+
+  switch (type) {
+    case "store":
+      iconSvg += `<path d="M6 6h12v10H6z"/><path d="M3 16V6l3-3h12l3 3v10h-3v4H6v-4H3z"/>`;
+      break;
+    case "collector":
+      iconSvg += `<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>`;
+      break;
+    case "event":
+      iconSvg += `<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>`;
+      break;
+    default:
+      iconSvg += `<path d="M12 2a8 8 0 0 1 8 8c0 4.8-8 12-8 12s-8-7.2-8-12a8 8 0 0 1 8-8z"/><circle cx="12" cy="10" r="3"/>`;
   }
-}
+
+  iconSvg += `</svg>`;
+
+  return new L.Icon({
+    iconUrl: `data:image/svg+xml;base64,${btoa(iconSvg)}`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30],
+  });
+};
 
 const InteractiveMap = () => {
   const { markers, loading, error } = useMarkers();
@@ -44,7 +63,9 @@ const InteractiveMap = () => {
         Interactive Map
       </h2>
 
-      <div className="flex flex-row w-full h-[75vh] px-4">
+      {/* Map & Filters Container */}
+      <div className="flex flex-row w-full h-[75vh] px-4 text-gray-700">
+        {/* Sidebar for Filters */}
         <div className="w-1/4 bg-white shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold">Filter Options</h3>
           <select
