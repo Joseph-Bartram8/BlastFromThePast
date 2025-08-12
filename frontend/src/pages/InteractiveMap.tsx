@@ -49,7 +49,7 @@ const InteractiveMap = () => {
       </h2>
 
       {/* Map & Filters Container */}
-      <div className="flex flex-row w-full h-[75vh] px-4">
+      <div className="flex flex-row w-full h-[75vh] px-4 text-gray-700">
         {/* Sidebar for Filters */}
         <div className="w-1/4 bg-white shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold">Filter Options</h3>
